@@ -2,6 +2,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // دسترسی به پلاگین نیتیو اعلان‌ها
   const { LocalNotifications } = Capacitor.Plugins;
 
+  // ساخت کانال اختصاصی آلارم با صدای بلند (این کد باید ابتدا اجرا شود)
+  if (LocalNotifications) {
+    LocalNotifications.createChannel({
+      id: 'alarm-channel',
+      name: 'آلارم یادآور',
+      description: 'کانال پخش صدای آلارم برای یادآورها',
+      sound: 'alarm.mp3', // نام فایلی که در گیت‌هاب دانلود می‌کنیم
+      importance: 5,      // بالاترین اهمیت برای اینکه صدا با صدای بلند پخش شود
+      visibility: 1,
+      vibration: true
+    }).catch(err => console.log('Channel creation error:', err));
+  }
+
   let state = {
     theme: localStorage.getItem('app_theme') || 'dark',
     lang: localStorage.getItem('app_lang') || 'fa',
@@ -22,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const EN_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const EN_DAYS = ['S','M','T','W','T','F','S'];
 
-  // --- الگوریتم تقویم (بدون تغییر) ---
+  // --- الگوریتم تقویم جلالی ---
   const BREAKS = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
   const div = (a, b) => ~~(a / b); const mod = (a, b) => a - ~~(a / b) * b;
   function jalCal(jy) { let bl = BREAKS.length, gy = jy + 621, leapJ = -14, jp = BREAKS[0], jm, jump = 0, n, leap, leapG, march; for (let i = 1; i < bl; i++) { jm = BREAKS[i]; jump = jm - jp; if (jy < jm) break; leapJ = leapJ + div(jump, 33) * 8 + div(mod(jump, 33), 4); jp = jm; } n = jy - jp; leapJ = leapJ + div(n, 33) * 8 + div(mod(n, 33) + 3, 4); if (mod(jump, 33) === 4 && jump - n === 4) leapJ += 1; leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150; march = 20 + leapJ - leapG; if (jump - n < 6) n = n - jump + div(jump + 4, 33) * 33; leap = mod(mod(n + 1, 33) - 1, 4); if (leap === -1) leap = 4; return { leap, gy, march }; }
@@ -39,6 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
     body.className = `theme-${state.theme} lang-${state.lang}`;
     document.documentElement.dir = state.lang === 'fa' ? 'rtl' : 'ltr';
     const isFa = state.lang === 'fa';
+    
+    // تغییر متون دکمه‌ها بر اساس زبان
     document.getElementById('datetime-trigger').title = isFa ? 'انتخاب تاریخ' : 'Select Date';
     document.getElementById('note-modal-title').innerText = isFa ? 'یادداشت' : 'Note';
     document.querySelector('#note-title-input').placeholder = isFa ? 'عنوان...' : 'Title...';
@@ -222,28 +237,24 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('note-modal').classList.add('active');
   }
 
-  // --- این بخش تغییر کرده است: زمان‌بندی آلارم نیتیو ---
+  // --- زمان‌بندی آلارم نیتیو با کانال اختصاصی ---
   async function scheduleNativeAlarm(note) {
     if (!note.alarm || !note.time) return;
     
     try {
-      // درخواست دسترسی برای نوتیفیکیشن (برای اندروید 13+)
       let perm = await LocalNotifications.requestPermissions();
       if (perm.display !== 'granted') {
         alert('برای دریافت آلارم، دسترسی اعلان‌ها را در تنظیمات گوشی فعال کنید.');
         return;
       }
 
-      // تبدیل زمان به فرمت تاریخ کامل برای آلارم
       const [hours, minutes] = note.time.split(':');
       let alarmDate = new Date(`${note.date}T${hours}:${minutes}:00`);
       
-      // اگر زمان گذشته بود، آلارم را برای فردا تنظیم نکن (فقط برای امروز کار کند)
       if (alarmDate.getTime() < Date.now()) {
          return; 
       }
 
-      // ID منحصر به فرد برای این آلارم
       const notifId = parseInt(note.id.slice(-6), 16) % 2147483647;
 
       await LocalNotifications.schedule({
@@ -253,8 +264,8 @@ document.addEventListener('DOMContentLoaded', () => {
             body: note.description || 'یادآور دفترچه هوشمند',
             id: notifId,
             schedule: { at: alarmDate },
-            sound: null, // از صدای پیش‌فرض گوشی استفاده می‌کند
-            attachments: null,
+            sound: 'alarm.mp3',         // استفاده از فایل صوتی اختصاصی
+            channelId: 'alarm-channel', // استفاده از کانال با اهمیت بالا
             actionTypeId: "",
             extra: null
           }
@@ -285,9 +296,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (editingNoteId) {
       const note = state.notes.find(n => n.id === editingNoteId);
       if (note) { 
-        if(note.alarm && !alarm) cancelNativeAlarm(note); // اگر آلارم خاموش شد، لغو کن
+        if(note.alarm && !alarm) cancelNativeAlarm(note); 
         note.title = title; note.description = desc; note.time = time; note.alarm = alarm; 
-        if (alarm) scheduleNativeAlarm(note); // زمان‌بندی مجدد
+        if (alarm) scheduleNativeAlarm(note); 
       }
     } else {
       const newNote = { id: Date.now().toString(), date: state.selectedDate, title, description: desc, time, alarm, completed: false, order: Date.now() };
@@ -297,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
     saveData(); document.getElementById('note-modal').classList.remove('active'); renderNotes();
   });
 
-  // کپی و پیست
   document.getElementById('copy-btn').addEventListener('click', () => {
     const dayNotes = state.notes.filter(n => n.date === state.selectedDate);
     if(dayNotes.length === 0) return;
@@ -314,7 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
     saveData(); renderNotes();
   });
 
-  // تنظیمات
   document.getElementById('toggle-theme').addEventListener('click', () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('app_theme', state.theme); applySettings(); });
   document.getElementById('toggle-lang').addEventListener('click', () => { state.lang = state.lang === 'fa' ? 'en' : 'fa'; localStorage.setItem('app_lang', state.lang); applySettings(); });
 

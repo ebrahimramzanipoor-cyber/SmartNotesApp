@@ -28,6 +28,12 @@ jobs:
           npm install
           npm install @capacitor/android
 
+      - name: Prepare Web Assets
+        run: |
+          mkdir www
+          cp index.html style.css script.js *.woff2 www/
+          sed -i 's/"webDir": "."/"webDir": "www"/' capacitor.config.json
+
       - name: Add Android Platform
         run: npx cap add android
 

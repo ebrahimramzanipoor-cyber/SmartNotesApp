@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>دفترچه هوشمند</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-dark lang-fa">
+
+  <header class="top-bar">
+    <div class="datetime-box" id="datetime-trigger">
+      <span id="live-time">18:32</span>
+      <span class="separator">|</span>
+      <span id="live-date">شنبه | ۲۱ آبان ۱۴۰۵</span>
+    </div>
+    <div class="action-buttons">
+      <button id="copy-btn" class="icon-btn" title="کپی یادداشت‌ها">📋</button>
+      <button id="paste-btn" class="icon-btn" title="چسباندن یادداشت‌ها">📥</button>
+    </div>
+  </header>
+
+  <main class="notes-container" id="notes-list"></main>
+
+  <div class="fab-left" id="fab-add" title="یادداشت جدید">+</div>
+  <div class="fab-right" id="fab-settings" title="تنظیمات">⚙️</div>
+
+  <!-- مودال تقویم -->
+  <div class="modal-overlay" id="calendar-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button class="nav-btn" id="prev-month">‹</button>
+        <h3 id="cal-title"></h3>
+        <button class="nav-btn" id="next-month">›</button>
+      </div>
+      <div class="calendar-grid" id="cal-grid"></div>
+      <button class="btn-cancel" id="close-calendar">بستن</button>
+    </div>
+  </div>
+
+  <!-- مودال افزودن/ویرایش یادداشت -->
+  <div class="modal-overlay" id="note-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="note-modal-title">یادداشت جدید</h3>
+        <button class="close-btn" id="close-note-modal">×</button>
+      </div>
+      <input type="text" id="note-title-input" class="form-input" placeholder="عنوان...">
+      <textarea id="note-desc-input" class="form-textarea" placeholder="توضیحات (اختیاری)..."></textarea>
+      
+      <div class="form-row">
+        <input type="time" id="note-time-input" class="form-input">
+        <label class="checkbox-label">
+          <input type="checkbox" id="note-alarm-input">
+          <span>یادآور پس‌زمینه</span>
+        </label>
+      </div>
+      
+      <button class="btn-save" id="save-note-btn">ذخیره</button>
+    </div>
+  </div>
+
+  <!-- مودال تنظیمات -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>تنظیمات</h3>
+        <button class="close-btn" id="close-settings-modal">×</button>
+      </div>
+      <div class="setting-item">
+        <span>حالت نمایش</span>
+        <button id="toggle-theme" class="btn-small">تغییر تم</button>
+      </div>
+      <div class="setting-item">
+        <span>زبان برنامه</span>
+        <button id="toggle-lang" class="btn-small">English / فارسی</button>
+      </div>
+      <div class="setting-item" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+        <button id="export-btn" class="btn-save" style="width: 100%; margin-bottom: 10px;">📤 خروجی گرفتن (بکاپ)</button>
+        <button id="import-btn" class="btn-cancel" style="width: 100%;">📥 ورودی (بازگردانی بکاپ)</button>
+        <input type="file" id="import-file" accept=".json" style="display: none;">
+      </div>
+    </div>
+  </div>
+
+  <!-- اسکریپت‌های Capacitor -->
+  <script src="capacitor.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

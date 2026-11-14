@@ -1,13 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
   const { LocalNotifications } = Capacitor.Plugins;
 
-  // ساخت کانال نسخه ۲ برای دور زدن کش اندروید
   if (LocalNotifications) {
     LocalNotifications.createChannel({
-      id: 'alarm-channel-v2',
+      id: 'alarm-channel-v3',
       name: 'آلارم یادآور',
       description: 'کانال پخش صدای آلارم برای یادآورها',
-      sound: 'alarm.mp3',
+      sound: 'alarm', // بدون پسوند
       importance: 5,
       visibility: 1,
       vibration: true
@@ -238,17 +237,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!note.alarm || !note.time) return;
     
     try {
-      // ۱. بررسی و درخواست دسترسی اعلان
       let perm = await LocalNotifications.requestPermissions();
       if (perm.display !== 'granted') {
         alert('برای دریافت آلارم، دسترسی اعلان‌ها را در تنظیمات گوشی فعال کنید.');
         return;
       }
 
-      // ۲. بررسی و درخواست دسترسی برای آلارم دقیق (اندروید ۱۲ به بالا)
-      const exactPerm = await LocalNotifications.checkExactNotificationSetting();
-      if (exactPerm.exact_alarm !== 'granted') {
-        await LocalNotifications.changeExactNotificationSetting();
+      // تلاش برای دریافت مجوز آلارم دقیق (اندروید ۱۲ و ۱۳)
+      try {
+        const exactPerm = await LocalNotifications.checkExactNotificationSetting();
+        if (exactPerm.exact_alarm !== 'granted') {
+          await LocalNotifications.changeExactNotificationSetting();
+        }
+      } catch (e) {
+        console.log('Exact alarm check not supported or failed', e);
       }
 
       const [hours, minutes] = note.time.split(':');
@@ -268,10 +270,10 @@ document.addEventListener('DOMContentLoaded', () => {
             id: notifId,
             schedule: { 
               at: alarmDate,
-              allowWhileIdle: true // حیاتی برای اجرای آلارم در حالت خواب گوشی
+              allowWhileIdle: true
             },
-            sound: 'alarm.mp3',
-            channelId: 'alarm-channel-v2',
+            sound: 'alarm', // بدون پسوند
+            channelId: 'alarm-channel-v3',
             actionTypeId: "",
             extra: null
           }

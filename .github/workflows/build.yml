@@ -37,6 +37,12 @@ jobs:
       - name: Add Android Platform
         run: npx cap add android
 
+      # این مرحله جدید است: دانلود فایل صدای آلارم به داخل پروژه اندروید
+      - name: Download Alarm Sound
+        run: |
+          mkdir -p android/app/src/main/res/raw
+          curl -L -o android/app/src/main/res/raw/alarm.mp3 "https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/Beep.mp3"
+
       - name: Capacitor Sync
         run: npx cap sync android
 

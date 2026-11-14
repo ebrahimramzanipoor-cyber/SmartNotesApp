@@ -1,15 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // دسترسی به پلاگین نیتیو اعلان‌ها
   const { LocalNotifications } = Capacitor.Plugins;
 
-  // ساخت کانال اختصاصی آلارم با صدای بلند (این کد باید ابتدا اجرا شود)
+  // ساخت کانال نسخه ۲ برای دور زدن کش اندروید
   if (LocalNotifications) {
     LocalNotifications.createChannel({
-      id: 'alarm-channel',
+      id: 'alarm-channel-v2',
       name: 'آلارم یادآور',
       description: 'کانال پخش صدای آلارم برای یادآورها',
-      sound: 'alarm.mp3', // نام فایلی که در گیت‌هاب دانلود می‌کنیم
-      importance: 5,      // بالاترین اهمیت برای اینکه صدا با صدای بلند پخش شود
+      sound: 'alarm.mp3',
+      importance: 5,
       visibility: 1,
       vibration: true
     }).catch(err => console.log('Channel creation error:', err));
@@ -35,7 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const EN_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const EN_DAYS = ['S','M','T','W','T','F','S'];
 
-  // --- الگوریتم تقویم جلالی ---
   const BREAKS = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
   const div = (a, b) => ~~(a / b); const mod = (a, b) => a - ~~(a / b) * b;
   function jalCal(jy) { let bl = BREAKS.length, gy = jy + 621, leapJ = -14, jp = BREAKS[0], jm, jump = 0, n, leap, leapG, march; for (let i = 1; i < bl; i++) { jm = BREAKS[i]; jump = jm - jp; if (jy < jm) break; leapJ = leapJ + div(jump, 33) * 8 + div(mod(jump, 33), 4); jp = jm; } n = jy - jp; leapJ = leapJ + div(n, 33) * 8 + div(mod(n, 33) + 3, 4); if (mod(jump, 33) === 4 && jump - n === 4) leapJ += 1; leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150; march = 20 + leapJ - leapG; if (jump - n < 6) n = n - jump + div(jump + 4, 33) * 33; leap = mod(mod(n + 1, 33) - 1, 4); if (leap === -1) leap = 4; return { leap, gy, march }; }
@@ -53,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.dir = state.lang === 'fa' ? 'rtl' : 'ltr';
     const isFa = state.lang === 'fa';
     
-    // تغییر متون دکمه‌ها بر اساس زبان
     document.getElementById('datetime-trigger').title = isFa ? 'انتخاب تاریخ' : 'Select Date';
     document.getElementById('note-modal-title').innerText = isFa ? 'یادداشت' : 'Note';
     document.querySelector('#note-title-input').placeholder = isFa ? 'عنوان...' : 'Title...';
@@ -237,15 +234,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('note-modal').classList.add('active');
   }
 
-  // --- زمان‌بندی آلارم نیتیو با کانال اختصاصی ---
   async function scheduleNativeAlarm(note) {
     if (!note.alarm || !note.time) return;
     
     try {
+      // ۱. بررسی و درخواست دسترسی اعلان
       let perm = await LocalNotifications.requestPermissions();
       if (perm.display !== 'granted') {
         alert('برای دریافت آلارم، دسترسی اعلان‌ها را در تنظیمات گوشی فعال کنید.');
         return;
+      }
+
+      // ۲. بررسی و درخواست دسترسی برای آلارم دقیق (اندروید ۱۲ به بالا)
+      const exactPerm = await LocalNotifications.checkExactNotificationSetting();
+      if (exactPerm.exact_alarm !== 'granted') {
+        await LocalNotifications.changeExactNotificationSetting();
       }
 
       const [hours, minutes] = note.time.split(':');
@@ -263,9 +266,12 @@ document.addEventListener('DOMContentLoaded', () => {
             title: note.title,
             body: note.description || 'یادآور دفترچه هوشمند',
             id: notifId,
-            schedule: { at: alarmDate },
-            sound: 'alarm.mp3',         // استفاده از فایل صوتی اختصاصی
-            channelId: 'alarm-channel', // استفاده از کانال با اهمیت بالا
+            schedule: { 
+              at: alarmDate,
+              allowWhileIdle: true // حیاتی برای اجرای آلارم در حالت خواب گوشی
+            },
+            sound: 'alarm.mp3',
+            channelId: 'alarm-channel-v2',
             actionTypeId: "",
             extra: null
           }

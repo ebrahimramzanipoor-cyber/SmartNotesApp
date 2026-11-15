@@ -70,15 +70,15 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
-      # فایل امضا را مستقیماً در پوشه app قرار می‌دهیم تا Gradle آن را پیدا کند
+      # اینجا اصلاح شد: پاک کردن هدر/فوتر و خطوط اضافی قبل از ساخت فایل
       - name: Restore Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
+          CLEAN_BASE64=$(echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r' | sed 's/-----BEGIN CERTIFICATE-----//g' | sed 's/-----END CERTIFICATE-----//g')
+          echo "$CLEAN_BASE64" | base64 -d > android/app/release.jks
 
       - name: Grant Execute Permission for Gradlew
         run: chmod +x android/gradlew
 
-      # ساخت نسخه نهایی و امضا شده
       - name: Build Android Release APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}

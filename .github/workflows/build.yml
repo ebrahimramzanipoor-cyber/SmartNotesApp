@@ -37,10 +37,6 @@ jobs:
       - name: Add Android Platform
         run: npx cap add android
 
-      - name: Lower minSdkVersion
-        run: |
-          sed -i 's/minSdkVersion = 2[2-9]/minSdkVersion = 21/' android/variables.gradle || true
-
       - name: Download Alarm Sound
         run: |
           mkdir -p android/app/src/main/res/raw
@@ -74,13 +70,15 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
+      # فایل امضا را مستقیماً در پوشه app قرار می‌دهیم تا Gradle آن را پیدا کند
       - name: Restore Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
 
       - name: Grant Execute Permission for Gradlew
         run: chmod +x android/gradlew
 
+      # ساخت نسخه نهایی و امضا شده
       - name: Build Android Release APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -89,7 +87,7 @@ jobs:
         run: |
           cd android
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=$(pwd)/../release.jks \
+            -Pandroid.injected.signing.store.file=$(pwd)/app/release.jks \
             -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
             -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
             -Pandroid.injected.signing.key.password=$KEY_PASSWORD

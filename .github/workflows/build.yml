@@ -37,6 +37,26 @@ jobs:
       - name: Add Android Platform
         run: npx cap add android
 
+      # --- تنظیمات جدید برای سازگاری با گوشی‌های قدیمی و ساخت Universal APK ---
+      - name: Configure Android Build Settings
+        run: |
+          node -e "
+            const fs = require('fs');
+            
+            // 1. تنظیم نسخه‌های اندروید در variables.gradle
+            let vars = fs.readFileSync('android/variables.gradle', 'utf8');
+            vars = vars.replace(/minSdkVersion = \d+/, 'minSdkVersion = 23');
+            vars = vars.replace(/targetSdkVersion = \d+/, 'targetSdkVersion = 33');
+            fs.writeFileSync('android/variables.gradle', vars);
+
+            // 2. اجبار به ساخت APK جامع (Universal) بدون تقسیم‌بندی معماری
+            let buildGradle = fs.readFileSync('android/app/build.gradle', 'utf8');
+            if (!buildGradle.includes('splits {')) {
+              buildGradle = buildGradle.replace('android {', 'android {\n    splits {\n        abi {\n            enable false\n        }\n    }');
+              fs.writeFileSync('android/app/build.gradle', buildGradle);
+            }
+          "
+
       - name: Download Alarm Sound
         run: |
           mkdir -p android/app/src/main/res/raw
@@ -70,7 +90,6 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
-      # اینجا اصلاح شد: پاک کردن هدر/فوتر و خطوط اضافی قبل از ساخت فایل
       - name: Restore Keystore
         run: |
           CLEAN_BASE64=$(echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r' | sed 's/-----BEGIN CERTIFICATE-----//g' | sed 's/-----END CERTIFICATE-----//g')
